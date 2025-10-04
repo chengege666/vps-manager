@@ -2,11 +2,11 @@
 # ==========================================
 # VPS 管理工具 (交互式)
 # 功能: 系统信息、系统更新、系统清理、端口管理、Docker管理、SSH管理
-# 作者: 陈哥哥
+# 作者: 陈哥哥 
 # ==========================================
 
 # 检查是否 root
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
   echo "请使用 root 用户运行此脚本！"
   exit 1
 fi
@@ -103,15 +103,53 @@ port_manage() {
 }
 
 # ==============================
-# Docker 管理函数
+# Docker 管理函数 (已优化)
 # ==============================
 docker_manage() {
-    echo "-------- Docker 管理 --------"
+    # 检查 Docker 是否安装
     if ! command -v docker >/dev/null 2>&1; then
-        echo "未安装 Docker，请先安装 Docker"
-        return
+        echo "检测到 Docker 未安装。"
+        read -rp "是否使用官方一键脚本安装 Docker? (y/n): " install_choice
+        # 根据用户选择决定是否安装
+        if [[ "$install_choice" =~ ^[Yy]$ ]]; then
+            echo "正在执行 Docker 官方一键安装脚本..."
+            # 使用 curl 下载并执行脚本，如果 curl 失败则尝试 wget
+            if command -v curl >/dev/null 2>&1; then
+                curl -fsSL https://get.docker.com -o get-docker.sh
+            elif command -v wget >/dev/null 2>&1; then
+                wget -O get-docker.sh https://get.docker.com
+            else
+                echo "错误: 未找到 curl 或 wget，无法下载安装脚本。"
+                return
+            fi
+            
+            # 检查脚本是否成功下载
+            if [ ! -f "get-docker.sh" ]; then
+                echo "错误: Docker 安装脚本下载失败。"
+                return
+            fi
+
+            # 执行脚本并处理国内镜像加速
+            sudo sh get-docker.sh --mirror Aliyun
+            rm get-docker.sh # 删除临时脚本
+
+            # 检查安装是否成功
+            if command -v docker >/dev/null 2>&1; then
+                echo "Docker 安装成功！"
+                # 安装成功后，重新调用本函数，直接进入管理菜单
+                docker_manage
+                return
+            else
+                echo "Docker 安装失败，请检查网络或脚本输出。"
+                return
+            fi
+        else
+            echo "已取消 Docker 安装。"
+            return
+        fi
     fi
 
+    echo "-------- Docker 管理 --------"
     echo "1) 查看容器"
     echo "2) 启动容器"
     echo "3) 停止容器"
@@ -154,6 +192,7 @@ docker_manage() {
     esac
     echo "---------------------------"
 }
+
 
 # ==============================
 # SSH 管理函数（自动放行防火墙端口）
