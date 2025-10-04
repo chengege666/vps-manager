@@ -19,7 +19,7 @@ RESET="\033[0m"
 print_welcome() {
     clear
     echo -e "${CYAN}==================================================${RESET}"
-    echo -e "${MAGENTA}                 VPS 工具箱 v2.0                 ${RESET}"
+    echo -e "${MAGENTA}                 VPS 工具箱 v2.2                 ${RESET}"
     echo -e "${CYAN}--------------------------------------------------${RESET}"
     echo -e "${YELLOW}功能: BBR测速, 系统管理, Docker, SSH配置等${RESET}"
     echo -e "${GREEN}测速结果保存: ${RESULT_FILE}${RESET}"
