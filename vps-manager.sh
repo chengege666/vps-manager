@@ -12,6 +12,14 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # ==============================
+# 暂停并等待用户按键的函数
+# ==============================
+pause() {
+    read -rp "按 Enter 键返回主菜单..."
+}
+
+
+# ==============================
 # 系统信息函数
 # ==============================
 sys_info() {
@@ -110,10 +118,8 @@ docker_manage() {
     if ! command -v docker >/dev/null 2>&1; then
         echo "检测到 Docker 未安装。"
         read -rp "是否使用官方一键脚本安装 Docker? (y/n): " install_choice
-        # 根据用户选择决定是否安装
         if [[ "$install_choice" =~ ^[Yy]$ ]]; then
             echo "正在执行 Docker 官方一键安装脚本..."
-            # 使用 curl 下载并执行脚本，如果 curl 失败则尝试 wget
             if command -v curl >/dev/null 2>&1; then
                 curl -fsSL https://get.docker.com -o get-docker.sh
             elif command -v wget >/dev/null 2>&1; then
@@ -123,20 +129,17 @@ docker_manage() {
                 return
             fi
             
-            # 检查脚本是否成功下载
             if [ ! -f "get-docker.sh" ]; then
                 echo "错误: Docker 安装脚本下载失败。"
                 return
             fi
 
-            # 执行脚本并处理国内镜像加速
             sudo sh get-docker.sh --mirror Aliyun
-            rm get-docker.sh # 删除临时脚本
+            rm get-docker.sh
 
-            # 检查安装是否成功
             if command -v docker >/dev/null 2>&1; then
                 echo "Docker 安装成功！"
-                # 安装成功后，重新调用本函数，直接进入管理菜单
+                # 安装成功后，直接重新进入管理菜单
                 docker_manage
                 return
             else
@@ -163,23 +166,11 @@ docker_manage() {
 
     case "$docker_choice" in
         1) docker ps -a ;;
-        2)
-            read -rp "容器名称或ID: " c_name
-            docker start "$c_name"
-            ;;
-        3)
-            read -rp "容器名称或ID: " c_name
-            docker stop "$c_name"
-            ;;
-        4)
-            read -rp "容器名称或ID: " c_name
-            docker restart "$c_name"
-            ;;
+        2) read -rp "容器名称或ID: " c_name; docker start "$c_name" ;;
+        3) read -rp "容器名称或ID: " c_name; docker stop "$c_name" ;;
+        4) read -rp "容器名称或ID: " c_name; docker restart "$c_name" ;;
         5) docker images ;;
-        6)
-            read -rp "镜像名称: " img_name
-            docker pull "$img_name"
-            ;;
+        6) read -rp "镜像名称: " img_name; docker pull "$img_name" ;;
         7)
             read -rp "镜像名称: " img_name
             read -rp "容器名称: " c_name
@@ -212,7 +203,6 @@ ssh_manage() {
                 sed -i "s/^#Port 22/Port $new_port/" /etc/ssh/sshd_config
                 sed -i "s/^Port .*/Port $new_port/" /etc/ssh/sshd_config
 
-                # 自动放行防火墙端口
                 if command -v ufw >/dev/null 2>&1; then
                     ufw allow "$new_port"
                     echo "UFW: 已允许端口 $new_port"
@@ -245,9 +235,10 @@ ssh_manage() {
 }
 
 # ==============================
-# 主菜单
+# 主菜单 (最终优化版)
 # ==============================
 while true; do
+    clear # 核心优化点1：每次循环前清屏
     echo ""
     echo "======== VPS 管理工具 ========"
     echo "1) 查看系统信息"
@@ -260,13 +251,16 @@ while true; do
     read -rp "请选择操作: " choice
 
     case "$choice" in
-        1) sys_info ;;
-        2) sys_update ;;
-        3) sys_clean ;;
-        4) port_manage ;;
-        5) docker_manage ;;
-        6) ssh_manage ;;
+        1) sys_info; pause ;;
+        2) sys_update; pause ;;
+        3) sys_clean; pause ;;
+        4) port_manage; pause ;;
+        5) docker_manage; pause ;;
+        6) ssh_manage; pause ;;
         7) exit 0 ;;
-        *) echo "无效选项" ;;
+        *) 
+           echo "无效选项，请重新输入。"
+           sleep 2 # 核心优化点2：错误提示后暂停2秒
+           ;;
     esac
 done
